@@ -203,8 +203,14 @@
     class="copy"
     on:click={(event) => {
       const el = event.currentTarget;
+
       navigator.clipboard
-        .writeText("/load.html?x=" + btoa(encodeURIComponent(localStorage.getItem("data"))))
+        .writeText(
+          window.location.origin +
+            import.meta.env.BASE_URL +
+            "load.html?x=" +
+            btoa(encodeURIComponent(localStorage.getItem("data")))
+        )
         .then(() => {
           el.innerText = "copied link";
           el.style.lineHeight = "16px";

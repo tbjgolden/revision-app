@@ -162,7 +162,7 @@
               }, {}),
             ])
           );
-          window.location.href = "/";
+          window.location.href = import.meta.env.BASE_URL;
         }}
         disabled={totalSessions !== selectedCount ||
           Object.values(sessions).filter(Boolean).length < 2}

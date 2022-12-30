@@ -11,14 +11,8 @@
         background-color: #242424;
       }
     </style>
-    <script>
-      let prevData = undefined;
-      let urlData = new URLSearchParams(location.search).get("x");
-      if (urlData) {
-        localStorage.setItem("data", decodeURIComponent(atob(urlData)));
-      }
-      window.location.href = "/";
-    </script>
   </head>
-  <body></body>
+  <body>
+    <script type="module" src="/src/load.ts"></script>
+  </body>
 </html>
