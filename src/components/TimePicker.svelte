@@ -95,7 +95,7 @@
       {/each}
     </div>
   {:else if shownSelector === "minutes"}
-    <div class="picker">
+    <div class="picker minutes">
       {#each new Array(12).fill(0) as _, i}
         <button value={i} on:click={setMinutes}>
           {asStr(i * 5)}
@@ -122,6 +122,11 @@
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     box-shadow: 0 0.5px 2px #000;
+    left: 0;
+  }
+
+  .minutes {
+    left: 33px;
   }
 
   .time-picker-inner {

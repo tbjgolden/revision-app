@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { Confetti } from "svelte-confetti";
 
   type Session = {
     i: number;
@@ -64,25 +65,31 @@
     let shownSessionIndex: number;
     let shownSessionType: ViewData["shownSessionType"];
 
-    if (prevDays < 0) {
+    if (prevDays < 0 || nowTime - prevTime > 72) {
       shownSessionIndex = nextIndex;
       shownSessionType = "next";
-    } else if (nextTime - nowTime <= 6) {
-      shownSessionIndex = nextIndex;
-      if (unlocked >= nextIndex) {
+    } else {
+      if (nextTime - nowTime <= 6) {
+        if (nextIndex < unlocked) {
+          shownSessionIndex = nextIndex + 1;
+          shownSessionType = "next";
+        } else if (nextIndex === unlocked) {
+          shownSessionIndex = nextIndex;
+          shownSessionType = "curr";
+        } else {
+          shownSessionIndex = nextIndex;
+          shownSessionType = "next*";
+        }
+      } else if (prevIndex === unlocked) {
+        shownSessionIndex = prevIndex;
         shownSessionType = "curr";
+      } else if (prevIndex < unlocked) {
+        shownSessionIndex = nextIndex;
+        shownSessionType = "next";
       } else {
+        shownSessionIndex = prevIndex;
         shownSessionType = "next*";
       }
-    } else if (nowTime - prevTime > 72 || unlocked > prevIndex) {
-      shownSessionIndex = nextIndex;
-      shownSessionType = "next";
-    } else if (unlocked === prevIndex) {
-      shownSessionIndex = prevIndex;
-      shownSessionType = "curr";
-    } else {
-      shownSessionIndex = prevIndex;
-      shownSessionType = "next*";
     }
 
     if (shownSessionIndex >= totalSessions) {
@@ -92,7 +99,7 @@
 
     const sessionsFlat = Object.entries(sessions)
       .sort(([a], [b]) => {
-        return a === "nothing" ? 1 : b === "nothing" ? -1 : 0;
+        return a === "break 🏖" ? 1 : b === "break 🏖" ? -1 : 0;
       })
       .flatMap(([name, count]) => new Array<string>(count).fill(name));
 
@@ -123,13 +130,13 @@
   };
 
   const timeAsStr = (time: number): string => {
-    return `${`${Math.floor(time / 12)}`.padStart(2, "0")}:${`${(5 * time) % 12}`.padStart(
+    return `${`${Math.floor(time / 12)}`.padStart(2, "0")}:${`${5 * (time % 12)}`.padStart(
       2,
       "0"
     )}`;
   };
 
-  const getSessionRelativeTime = (session: Session): string => {
+  const getSessionRelativeTime = (session: Session, shouldShowAgo = false): string => {
     const nowIso = new Date().toISOString();
     const [nowH, nowM] = nowIso
       .slice(11, 16)
@@ -139,16 +146,23 @@
 
     const today = nowIso.slice(0, 10);
     const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     if (session.startDate === today) {
       const delta = Math.round(5 * (session.startTime - nowTime));
       if (delta <= 0) {
-        return "now";
+        if (!shouldShowAgo || delta === 0) {
+          return "now";
+        } else {
+          return `earlier today at ${timeAsStr(session.startTime)}`;
+        }
       } else {
         return `in ${delta} mins (${timeAsStr(session.startTime)})`;
       }
     } else {
       if (session.startDate === tomorrow) {
         return `tomorrow at ${timeAsStr(session.startTime)}`;
+      } else if (session.startDate === yesterday) {
+        return `yesterday at ${timeAsStr(session.startTime)}`;
       } else {
         return `on ${session.startDate} at ${timeAsStr(session.startTime)}`;
       }
@@ -169,10 +183,18 @@
   });
 </script>
 
-<div class="screen">
+<div
+  class={`screen ${viewData.shownSessionType === "done" ? "done-screen" : ""} ${
+    viewData.shownSessionType === "curr" && viewData.shownSession.name !== "break 🏖"
+      ? "black-screen"
+      : ""
+  }`}
+>
   {#if viewData.shownSessionType === "next" || viewData.shownSessionType === "next*"}
-    <h1>next session</h1>
-    <h2>{getSessionRelativeTime(viewData.shownSession)}</h2>
+    <h1 class="title">next session</h1>
+    <h2 class="subtitle">
+      {getSessionRelativeTime(viewData.shownSession)}
+    </h2>
     {#if viewData.shownSessionType === "next*"}
       <button
         on:click={() => {
@@ -184,9 +206,8 @@
       >
     {/if}
   {:else if viewData.shownSessionType === "curr"}
-    <h1>current session</h1>
-    <h2>started at {timeAsStr(viewData.shownSession.startTime)}</h2>
-    <h1>{viewData.shownSession.name}</h1>
+    <h2 class="subtitle">current session</h2>
+    <h1 class="title">{viewData.shownSession.name}</h1>
     <button
       on:click={() => {
         const data = JSON.parse(localStorage.getItem("data"));
@@ -196,8 +217,19 @@
       }}>done</button
     >
   {:else}
-    <h1>done</h1>
-    <h2>🎉🎉🎉</h2>
+    <div class="confetti">
+      <Confetti
+        x={[-5, 5]}
+        y={[0, 0.1]}
+        delay={[500, 2000]}
+        infinite
+        duration="5000"
+        amount="200"
+        fallDistance="100vh"
+      />
+    </div>
+    <h1 class="title">done</h1>
+    <h2 class="title">🎉🎉🎉</h2>
   {/if}
   <button
     class="copy"
@@ -231,9 +263,12 @@
 </div>
 {#if viewData.history.length > 0}
   <div class="prev">
-    <div class="scroll">↓</div>
+    <div class={`scroll ${viewData.shownSessionType === "done" ? "done-scroll" : ""}`}>↓</div>
     {#each viewData.history as session}
-      <div>{session.name} {session.startDate} {timeAsStr(session.startTime)}</div>
+      <div class="prev-session">
+        <div class="name">{session.name}</div>
+        <div class="time">{getSessionRelativeTime(session, true)}</div>
+      </div>
     {/each}
   </div>
 {/if}
@@ -242,14 +277,26 @@
   .screen {
     height: 100vh;
     height: 100svh;
-    padding: 40px;
+    padding: 3em 4em;
     flex: 1 0 auto;
     position: relative;
+  }
+
+  .done-screen {
+    height: auto;
+  }
+  .black-screen {
+    background: #111;
   }
 
   .prev {
     position: relative;
     width: 100%;
+    padding: 4px 0 12px;
+    background: #000;
+  }
+  .done-scroll {
+    display: none;
   }
 
   .scroll {
@@ -280,5 +327,40 @@
 
   .copy:hover {
     background: #555;
+  }
+
+  .name {
+    font-size: 1.5em;
+  }
+
+  .prev-session {
+    padding: 12px 24px;
+  }
+
+  .prev-session:nth-child(2n + 1) {
+    background-color: #111;
+  }
+
+  .time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .title {
+    font-size: 3em;
+  }
+  .subtitle {
+    font-size: 2em;
+  }
+
+  .confetti {
+    position: fixed;
+    top: -50px;
+    left: 0;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
   }
 </style>

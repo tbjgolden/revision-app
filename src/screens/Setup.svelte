@@ -3,18 +3,27 @@
 
   let timesPerDay = 0;
 
+  const TOMORROW = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
   let sessionStarts = [96, 132, 168, 192];
-  let startDate = new Date().toISOString().slice(0, 10);
-  let endDate = new Date().toISOString().slice(0, 10);
+  let startDate = TOMORROW;
+  let endDate = TOMORROW;
   $: todayStartTime = new Date(startDate).getTime();
   $: selectedDayStartTime = new Date(endDate).getTime();
   $: days = Math.round(1 + (selectedDayStartTime - todayStartTime) / 86400000);
-
   $: totalSessions = timesPerDay * days;
-  let sessions = {
-    nothing: 0,
+
+  let sessions: Record<string, number> = {
+    "break 🏖": 0,
   };
-  $: selectedCount = Object.values(sessions).reduce((a, b) => a + b, 0);
+  $: safeSessions =
+    Object.values(sessions).reduce((a, b) => a + b, 0) <= totalSessions
+      ? sessions
+      : Object.keys(sessions).reduce((o, k) => {
+          o[k] = 0;
+          return o;
+        }, {});
+  $: safeSelectedCount = Object.values(safeSessions).reduce((a, b) => a + b, 0);
 
   let nextSessionName = "";
 </script>
@@ -38,7 +47,7 @@
 
   {#if timesPerDay > 0}
     {#each new Array(timesPerDay).fill(0) as _, i}
-      <div>
+      <div class="section">
         <h4>time {i + 1} start time?</h4>
         <div>
           <TimePicker
@@ -54,7 +63,7 @@
       </div>
     {/each}
 
-    <div>
+    <div class="section">
       <h4>start date? (incl)</h4>
       <div>
         <input
@@ -70,7 +79,7 @@
       </div>
     </div>
 
-    <div>
+    <div class="section">
       <h4>end date? (incl)</h4>
       <div>
         <input
@@ -90,29 +99,52 @@
       </div>
     </div>
 
-    <div>
-      <h4>what sessions?</h4>
-      <p class="hint">
-        added {selectedCount}/{totalSessions}<br />(recommend 1 non-revision sessions per 3 revision
-        sessions)
+    <div class="section">
+      <h2>create revision sessions!</h2>
+      <blockquote>
+        <p>
+          Add your revision sessions here - create your custom sessions with a name and a number of
+          occurrences
+        </p>
+        <p>This app will create the perfect revision schedule for you</p>
+        <p>
+          Your schedule will be saved to your browser, so you can close and reopen the window
+          without losing your schedule. There'll also be a button to copy a url for your schedule to
+          a different device.
+        </p>
+        <p>
+          You can mix in some "break" sessions, or other productive sessions. Sit down at your desk
+          ready to work, click the "start" button and you'll find out which session is next - can't
+          get anxious if you don't know which is next - it might even be a break!
+        </p>
+        <p>
+          Bonus: if both you and your friends use this app and have an identical session time (e.g.
+          both 08:00 on the same day), the randomiser will try to sync up your breaks so you have
+          someone to hang out with!
+        </p>
+        <p>Suggestion: aim for 1 non-revision sessions per 3 revision sessions</p>
+      </blockquote>
+      <p class="counter">
+        added <span style={`color:${safeSelectedCount < totalSessions ? "#f90" : "#090"}`}
+          >{safeSelectedCount}</span
+        >/{totalSessions}
       </p>
-
       <div class="table">
-        {#each Object.entries(sessions) as [name, count]}
+        {#each Object.entries(safeSessions) as [name, count]}
           <div class="row">
             <div class="col-left">
               <button
-                disabled={count === 0 && name === "nothing"}
+                disabled={count === 0 && name === "break 🏖"}
                 on:click={() => {
-                  if (count === 0 && name !== "nothing") {
+                  if (count === 0 && name !== "break 🏖") {
                     delete sessions[name];
                   } else {
                     sessions[name] = count - 1;
                   }
                   sessions = sessions;
-                }}>{count === 0 && name !== "nothing" ? "🗑" : "\u2796"}</button
+                }}>{count === 0 && name !== "break 🏖" ? "🗑" : "\u2796"}</button
               ><span>{count}</span><button
-                disabled={totalSessions === selectedCount}
+                disabled={totalSessions === safeSelectedCount}
                 on:click={() => {
                   sessions[name] = count + 1;
                   sessions = sessions;
@@ -150,33 +182,50 @@
       </div>
     </div>
 
-    <p>
-      <button
-        class="go"
-        on:click={() => {
-          localStorage.setItem(
-            "data",
-            JSON.stringify([
-              startDate,
-              days,
-              sessionStarts.slice(0, timesPerDay),
-              Object.entries(sessions).reduce((o, [k, v]) => {
-                if (v) o[k] = v;
-                return o;
-              }, {}),
-            ])
-          );
-          window.location.href = import.meta.env.BASE_URL;
-        }}
-        disabled={totalSessions !== selectedCount ||
-          Object.values(sessions).filter(Boolean).length < 2}
-        style="font-size:2em">go!</button
-      >
-    </p>
+    <div class="section">
+      {#if totalSessions === safeSelectedCount}
+        <blockquote>
+          <p>
+            Final warning: You cannot edit a schedule after it has been created. If you need to
+            start from scratch and create a new schedule, navigate directly to this url.
+          </p>
+        </blockquote>
+      {/if}
+      <p>
+        <button
+          class="go"
+          on:click={() => {
+            localStorage.setItem(
+              "data",
+              JSON.stringify([
+                startDate,
+                days,
+                sessionStarts.slice(0, timesPerDay),
+                Object.entries(safeSessions).reduce((o, [k, v]) => {
+                  if (v) o[k] = v;
+                  return o;
+                }, {}),
+              ])
+            );
+            window.location.href = import.meta.env.BASE_URL;
+          }}
+          disabled={totalSessions !== safeSelectedCount}
+          style="font-size:2em">go!</button
+        >
+      </p>
+    </div>
   {/if}
 </div>
 
 <style>
+  label {
+    margin-bottom: 6px;
+  }
+
+  .section {
+    margin-top: 18px;
+  }
+
   .table {
     display: flex;
     flex-direction: column;
@@ -197,7 +246,7 @@
     line-height: 1.5;
     font-size: 32px;
     padding: 0 8px;
-    font-family: "Comic Neue", "Comic Sans", "Impact", "Arial Black", Arial, sans-serif;
+    font-family: Comic, Arimo, Arial, sans-serif;
     border: 0;
     margin: 0;
   }
@@ -218,6 +267,12 @@
   }
   .col-left button {
     flex: 0 0 auto;
+  }
+
+  .counter {
+    font-weight: bold;
+    font-size: 1.4em;
+    margin: 2px 0;
   }
 
   .screen {
@@ -244,16 +299,36 @@
     margin-left: 0;
   }
 
+  input[type="date"] {
+    background: #fff;
+  }
+
+  blockquote {
+    max-width: 66ch;
+    margin: 0 0 8px;
+    padding: 12px 16px;
+    background: #111;
+    border: 2px solid #a8f;
+    text-shadow: none;
+    color: #a8f;
+    border-radius: 16px;
+  }
+
+  blockquote > * {
+    margin: 8px 0;
+  }
+  blockquote > :last-child {
+    margin-bottom: 0;
+  }
+  blockquote > :first-child {
+    margin-top: 0;
+  }
+
   h1 {
     margin: 0 0 8px;
   }
 
   h4 {
     margin: 8px 0;
-  }
-
-  .hint {
-    margin: -6px 0 4px;
-    color: #aaa;
   }
 </style>

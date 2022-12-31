@@ -1,3 +1,5 @@
+import "./global.css";
+
 let urlData = new URLSearchParams(location.search).get("x");
 if (urlData) {
   localStorage.setItem("data", decodeURIComponent(atob(urlData)));
