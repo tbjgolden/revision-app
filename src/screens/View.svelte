@@ -65,31 +65,32 @@
     let shownSessionIndex: number;
     let shownSessionType: ViewData["shownSessionType"];
 
-    if (prevDays < 0 || nowTime - prevTime > 72) {
+    if (prevDays < 0) {
+      shownSessionIndex = nextIndex;
+      shownSessionType = "next";
+    } else if (nextTime - nowTime <= 6) {
+      if (nextIndex < unlocked) {
+        shownSessionIndex = nextIndex + 1;
+        shownSessionType = "next";
+      } else if (nextIndex === unlocked) {
+        shownSessionIndex = nextIndex;
+        shownSessionType = "curr";
+      } else {
+        shownSessionIndex = nextIndex;
+        shownSessionType = "next*";
+      }
+    } else if (nowTime - prevTime > 72) {
+      shownSessionIndex = nextIndex;
+      shownSessionType = "next";
+    } else if (prevIndex === unlocked) {
+      shownSessionIndex = prevIndex;
+      shownSessionType = "curr";
+    } else if (prevIndex < unlocked) {
       shownSessionIndex = nextIndex;
       shownSessionType = "next";
     } else {
-      if (nextTime - nowTime <= 6) {
-        if (nextIndex < unlocked) {
-          shownSessionIndex = nextIndex + 1;
-          shownSessionType = "next";
-        } else if (nextIndex === unlocked) {
-          shownSessionIndex = nextIndex;
-          shownSessionType = "curr";
-        } else {
-          shownSessionIndex = nextIndex;
-          shownSessionType = "next*";
-        }
-      } else if (prevIndex === unlocked) {
-        shownSessionIndex = prevIndex;
-        shownSessionType = "curr";
-      } else if (prevIndex < unlocked) {
-        shownSessionIndex = nextIndex;
-        shownSessionType = "next";
-      } else {
-        shownSessionIndex = prevIndex;
-        shownSessionType = "next*";
-      }
+      shownSessionIndex = prevIndex;
+      shownSessionType = "next*";
     }
 
     if (shownSessionIndex >= totalSessions) {
