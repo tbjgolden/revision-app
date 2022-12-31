@@ -12,6 +12,10 @@
   export let time = 0;
   export let min = -1;
   export let max = 288;
+
+  $: min_ = min ?? -1;
+  $: max_ = max ?? 288;
+
   $: m = time % 12;
   $: h = Math.floor(time / 12);
 
@@ -20,7 +24,7 @@
   const setHours: MouseEventHandler<HTMLButtonElement> = (event) => {
     if (event.target instanceof HTMLButtonElement) {
       const prevTime = time;
-      time = Math.min(max - 1, Math.max(min + 1, Number.parseInt(event.target.value) * 12 + m));
+      time = Math.min(max_ - 1, Math.max(min_ + 1, Number.parseInt(event.target.value) * 12 + m));
       if (time !== prevTime) {
         dispatch("change", time);
       }
@@ -29,43 +33,55 @@
   const setMinutes: MouseEventHandler<HTMLButtonElement> = (event) => {
     if (event.target instanceof HTMLButtonElement) {
       const prevTime = time;
-      time = Math.min(max - 1, Math.max(min + 1, Number.parseInt(event.target.value) + time - m));
+      time = Math.min(max_ - 1, Math.max(min_ + 1, Number.parseInt(event.target.value) + time - m));
       if (time !== prevTime) {
         dispatch("change", time);
       }
     }
   };
+
+  let timeout: ReturnType<typeof setTimeout>;
 </script>
 
 <div
   class="time-picker"
   on:mouseleave={() => {
-    shownSelector = "";
+    timeout = setTimeout(() => {
+      shownSelector = "";
+    }, 100);
   }}
   on:blur={() => {
-    shownSelector = "";
+    timeout = setTimeout(() => {
+      shownSelector = "";
+    }, 100);
   }}
 >
   <div class="time-picker-inner">
     <button
       on:click={() => {
+        clearTimeout(timeout);
         shownSelector = "hours";
       }}
       on:mouseenter={() => {
+        clearTimeout(timeout);
         shownSelector = "hours";
       }}
       on:focus={() => {
-        shownSelector = "";
+        clearTimeout(timeout);
+        shownSelector = "hours";
       }}>{asStr(h)}</button
     ><button
       class="r"
       on:click={() => {
+        clearTimeout(timeout);
         shownSelector = "minutes";
       }}
       on:mouseenter={() => {
+        clearTimeout(timeout);
         shownSelector = "minutes";
       }}
       on:focus={() => {
+        clearTimeout(timeout);
         shownSelector = "minutes";
       }}>{asStr(m * 5)}</button
     >

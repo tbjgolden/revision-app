@@ -45,6 +45,10 @@
             time={sessionStarts[i]}
             min={i > 0 ? sessionStarts[i - 1] : undefined}
             max={i < timesPerDay - 1 ? sessionStarts[i + 1] : undefined}
+            on:change={(value) => {
+              sessionStarts[i] = value.detail;
+              sessionStarts = sessionStarts;
+            }}
           />
         </div>
       </div>
@@ -200,12 +204,12 @@
 
   .row {
     display: flex;
-    margin-top: 4px;
+    margin-top: 8px;
   }
 
   .col-left {
-    flex: 0 0 72px;
-    padding-right: 12px;
+    flex: 0 0 76px;
+    padding-right: 8px;
     display: flex;
   }
   .col-left span {
